@@ -51,6 +51,7 @@ internal data class BenchmarkResult(
     @SerialName("wallMs") val wallMs: Long,
     @SerialName("cpuMs") val cpuMs: Long,
     @SerialName("cpuPercentOfOneCore") val cpuPercentOfOneCore: Double,
+    @SerialName("cpuPercentOfAllCores") val cpuPercentOfAllCores: Double,
     @SerialName("draws") val draws: Int,
     @SerialName("workloadFrames") val workloadFrames: Int,
     @SerialName("start") val start: ResourceSample,

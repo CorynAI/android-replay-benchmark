@@ -43,6 +43,7 @@ internal class BenchmarkActivityImpl(private val activity: Activity) : Choreogra
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadScheduledExecutor()
     private val meter = ResourceMeter()
+    private val coreCount = Runtime.getRuntime().availableProcessors()
     private val application by lazy { (activity.application as BenchmarkApplication).benchmark }
     private lateinit var metrics: TextView
     private lateinit var cpuValue: TextView
@@ -103,8 +104,7 @@ internal class BenchmarkActivityImpl(private val activity: Activity) : Choreogra
         metricsCard.addView(metrics)
         style.gap(metricsCard, 10)
         val stats = LinearLayout(activity)
-        val coreCount = Runtime.getRuntime().availableProcessors()
-        cpuValue = statistic(stats, "CPU · 1/$coreCount cores", 17f)
+        cpuValue = statistic(stats, "CPU · $coreCount cores", 17f)
         pssValue = statistic(stats, "RAM / PSS", 17f)
         javaValue = statistic(stats, "Java heap", 17f)
         nativeValue = statistic(stats, "Native heap", 17f)
@@ -257,7 +257,7 @@ internal class BenchmarkActivityImpl(private val activity: Activity) : Choreogra
             val cpu = finishCpu - began.cpuMs
             val result = BenchmarkResult(2, runId, application.config.mode, scenario, BuildConfig.HAS_CORYN, BuildConfig.CORYN_VERSION,
                 !BuildConfig.DEBUG, Build.MANUFACTURER + " " + Build.MODEL, Build.VERSION.SDK_INT, Process.myPid(),
-                Runtime.getRuntime().availableProcessors(), application.sdk.sessionId, warmupMs, wall, cpu, cpu * 100.0 / wall,
+                coreCount, application.sdk.sessionId, warmupMs, wall, cpu, cpu * 100.0 / wall, cpu * 100.0 / wall / coreCount,
                 measuredDraws, measuredFrames, began, end, measuredSamples, application.config.networkMode, application.config.fps,
                 transportAtStart, application.transport.snapshot())
             handler.post {
@@ -300,7 +300,7 @@ internal class BenchmarkActivityImpl(private val activity: Activity) : Choreogra
     private fun display(sample: ResourceSample) {
         val before = previous ?: sample
         val wall = (sample.elapsedMs - before.elapsedMs).coerceAtLeast(1)
-        val cpu = 100.0 * (sample.cpuMs - before.cpuMs) / wall
+        val cpu = 100.0 * (sample.cpuMs - before.cpuMs) / wall / coreCount
         val mib = 1_048_576.0
         val finalStatus = phase.startsWith("Complete") || phase.startsWith("FAILED")
         val status = if (running || finalStatus) phase else application.sdk.error ?: phase

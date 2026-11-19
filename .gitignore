@@ -5,5 +5,3 @@ build/
 *.iml
 local.properties
 results/
-__pycache__/
-*.pyc
