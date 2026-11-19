@@ -30,8 +30,9 @@ internal data class BenchmarkConfig(val mode: String, val apiKey: String, val en
 internal class BenchmarkConfigStore(private val context: Context) {
     fun read(): BenchmarkConfig {
         val preferences = context.getSharedPreferences("benchmark", Context.MODE_PRIVATE)
+        val defaultMode = if (BuildConfig.HAS_CORYN) "capture" else "off"
         return BenchmarkConfig(
-            preferences.getString("mode", "off")!!,
+            preferences.getString("mode", defaultMode)!!,
             preferences.getString("apiKey", "")!!,
             preferences.getString("endpoint", "")!!,
             preferences.getString("networkMode", "mock")!!,

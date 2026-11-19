@@ -19,11 +19,6 @@ android {
     }
     flavorDimensions += "recording"
     productFlavors {
-        create("plain") {
-            dimension = "recording"
-            applicationIdSuffix = ".plain"
-            buildConfigField("boolean", "HAS_CORYN", "false")
-        }
         create("sdk") {
             dimension = "recording"
             buildConfigField("boolean", "HAS_CORYN", "true")

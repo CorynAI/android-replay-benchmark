@@ -6,6 +6,22 @@ The project is maintained separately from the recording SDK at [CorynAI/android-
 Four fixed native workloads make comparisons repeatable: a static screen, a scrolling text list, a scrolling image list, and Canvas animation.
 CPU, RAM/PSS, Java heap and native heap stay visible. The UI follows the dashboard's lavender surfaces, rounded cards and navy action buttons.
 
+## Run from Android Studio
+
+The repository includes three shared **Android App** configurations in `.run/`:
+
+* **Full recording** - SDK with screen text and visuals; the default configuration.
+* **SDK - captures off** - SDK recording without built-in screen text or visual captures.
+* **NO SDK** - the separate `noSdk` app target, with no Coryn dependencies.
+
+Sync the project, choose a configuration and a device in the normal Android Studio toolbar, and press **Run**.
+The configurations install and launch their app through Android Studio. A control Activity sets the requested mode and local simulation before starting
+a fresh workload process. The same fixed workloads and meter are shared by both app targets.
+
+`app` defaults to its `sdk` flavor; `viewer` is an optional development flavor. Select a `release` build variant for performance measurements,
+or `debug` for development and the debugger. Debug readings are not comparable with the minified release reference results.
+The SDK-enabled app also defaults to full recording on a fresh install. Use the app's mode chooser to configure a hosted test project instead.
+
 ## Build with and without Coryn
 
 Clone this repository and open it in Android Studio, or use its Gradle wrapper:
@@ -18,7 +34,7 @@ cd android-replay-benchmark
 ./gradlew :app:assembleSdkRelease
 
 # No Coryn artifacts or their transitive dependencies.
-./gradlew :app:assemblePlainRelease
+./gradlew :noSdk:assembleRelease
 
 # Optional development Log Viewer, for installation-size comparison.
 ./gradlew :app:assembleViewerRelease
@@ -29,15 +45,15 @@ See the [AGP compatibility requirements](https://developer.android.com/build/rel
 Android 8.0/API 26 is the minimum phone version. Use a physical phone for performance measurements.
 
 The SDK version is pinned in `versions.toml`. Artifacts resolve from `https://nexus.retrec.io/repository/android-public`.
-Outputs are under `build/app/outputs/apk/{sdk,plain,viewer}/release/`. Release builds are minified, non-debuggable and shell-profileable, with development signing.
+Outputs are under `build/app/outputs/apk/{sdk,viewer}/release/` and `build/noSdk/outputs/apk/release/`. Release builds are minified, non-debuggable and shell-profileable, with development signing.
 These are test APKs. Plain and SDK application IDs differ, so both can be installed together.
 
 ```sh
 adb -s YOUR_SERIAL install -r build/app/outputs/apk/sdk/release/app-sdk-release.apk
-adb -s YOUR_SERIAL install -r build/app/outputs/apk/plain/release/app-plain-release.apk
+adb -s YOUR_SERIAL install -r build/noSdk/outputs/apk/release/noSdk-release.apk
 
 # Inspect the dependency-free variant.
-./gradlew :app:dependencies --configuration plainReleaseRuntimeClasspath
+./gradlew :noSdk:dependencies --configuration releaseRuntimeClasspath
 ```
 
 If an earlier build has a different signing certificate, export its results and uninstall that test app before installing your build.

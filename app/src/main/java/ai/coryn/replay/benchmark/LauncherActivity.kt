@@ -29,9 +29,15 @@ class LauncherActivity : Activity() {
 
 internal class LauncherActivityImpl(private val activity: Activity) {
     fun onCreate() {
+        val store = BenchmarkConfigStore(activity)
+        val requestedMode = activity.intent.getStringExtra("benchmarkMode")
+        val allowedModes = if (BuildConfig.HAS_CORYN) setOf("off", "recording", "capture") else setOf("off")
+        if (requestedMode != null && requestedMode in allowedModes) {
+            openWorkload(store, BenchmarkConfig(requestedMode, "", "", "mock", 5.0))
+            return
+        }
         activity.window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         val style = BenchmarkStyle(activity)
-        val store = BenchmarkConfigStore(activity)
         val config = store.read()
         val content = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(style.dp(20), style.dp(24), style.dp(20), style.dp(24)) }
         content.addView(style.text("CORYN SDK  /  DEVICE LAB", 11f, style.purple, true).apply { letterSpacing = 0.1f })
@@ -126,13 +132,8 @@ internal class LauncherActivityImpl(private val activity: Activity) {
                     try {
                         require(mode == "off" || !hosted.isChecked || apiKey.text.isNotBlank()) { "Enter a test project API key for hosted recording." }
                         val networkMode = if (hosted.isChecked) "hosted" else "mock"
-                        store.write(BenchmarkConfig(mode, apiKey.text.toString().trim(), endpoint.text.toString().trim(), networkMode, config.fps))
-                        val manager = activity.getSystemService(ActivityManager::class.java)
-                        // Mode selection runs separately so the next main process initializes with the selected mode.
-                        manager.runningAppProcesses?.filter { it.processName == activity.packageName }?.forEach { Process.killProcess(it.pid) }
-                        activity.startActivity(Intent(activity, BenchmarkActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
-                        activity.finish()
+                        openWorkload(store, BenchmarkConfig(mode, apiKey.text.toString().trim(),
+                            endpoint.text.toString().trim(), networkMode, config.fps))
                     } catch (error: IllegalArgumentException) {
                         status.text = error.message
                     }
@@ -154,4 +155,15 @@ internal class LauncherActivityImpl(private val activity: Activity) {
         root.addView(ScrollView(activity).apply { isFillViewport = true; addView(content) })
         activity.setContentView(root)
     }
+
+    private fun openWorkload(store: BenchmarkConfigStore, config: BenchmarkConfig) {
+        store.write(config)
+        val manager = activity.getSystemService(ActivityManager::class.java)
+        // The control Activity selects the mode before the next main process initializes the SDK.
+        manager.runningAppProcesses?.filter { it.processName == activity.packageName }?.forEach { Process.killProcess(it.pid) }
+        activity.startActivity(Intent(activity, BenchmarkActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        activity.finish()
+    }
+
 }

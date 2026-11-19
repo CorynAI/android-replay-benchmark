@@ -23,4 +23,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "CorynAndroidBenchmark"
-include(":app", ":tests")
+include(":app", ":noSdk", ":tests")
