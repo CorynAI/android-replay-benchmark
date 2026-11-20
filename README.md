@@ -8,19 +8,18 @@ CPU, RAM/PSS, Java heap and native heap stay visible. The UI follows the dashboa
 
 ## Run from Android Studio
 
-The repository includes three shared **Android App** configurations in `.run/`:
+The repository includes two shared **Android App** configurations in `.run/`:
 
-* **Full recording** - SDK with screen text and visuals; the default configuration.
-* **SDK - captures off** - SDK recording without built-in screen text or visual captures.
-* **NO SDK** - the separate `noSdk` app target, with no Coryn dependencies.
+1. **With Retrec dependencies** - the SDK app. Opens **Mode selection**, where you choose full recording, recording without UI captures, or SDK off.
+2. **No Retrec dependencies** - the separate `noSdk` app target, with no Coryn dependencies.
 
 Sync the project, choose a configuration and a device in the normal Android Studio toolbar, and press **Run**.
-The configurations install and launch their app through Android Studio. A control Activity sets the requested mode and local simulation before starting
-a fresh workload process. The same fixed workloads and meter are shared by both app targets.
+The SDK app's control Activity saves your selected mode and capture FPS before starting a fresh workload process. Full recording is the initial mode,
+and target FPS starts at 5. The same fixed workloads and meter are shared by both app targets. Interactive modes use local simulation without an API token.
 
-`app` defaults to its `sdk` flavor; `viewer` is an optional development flavor. Select a `release` build variant for performance measurements,
-or `debug` for development and the debugger. Debug readings are not comparable with the minified release reference results.
-The SDK-enabled app also defaults to full recording on a fresh install. Use the app's mode chooser to configure a hosted test project instead.
+`app` uses its `sdk` flavor. Select `sdkDebug` for development: **Log Viewer is included and its indicator is enabled only in this debug build**.
+Select `sdkRelease` or `sdkBenchmark` for performance measurements: both exclude the Log Viewer dependency and hide its indicator.
+The `noSdk` target excludes all Coryn dependencies in every build type. Debug readings are not comparable with the minified release reference results.
 
 ## Build with and without Coryn
 
@@ -36,8 +35,8 @@ cd android-replay-benchmark
 # No Coryn artifacts or their transitive dependencies.
 ./gradlew :noSdk:assembleRelease
 
-# Optional development Log Viewer, for installation-size comparison.
-./gradlew :app:assembleViewerRelease
+# Development build with Log Viewer enabled.
+./gradlew :app:assembleSdkDebug
 ```
 
 Requirements: JDK 17 or newer supported by Gradle 9.3.1 (tested with JDK 21), Android SDK Platform 37, and an SDK location in `ANDROID_HOME` or `local.properties`.
@@ -45,7 +44,7 @@ See the [AGP compatibility requirements](https://developer.android.com/build/rel
 Android 8.0/API 26 is the minimum phone version. Use a physical phone for performance measurements.
 
 The SDK version is pinned in `versions.toml`. Artifacts resolve from `https://nexus.retrec.io/repository/android-public`.
-Outputs are under `build/app/outputs/apk/{sdk,viewer}/release/` and `build/noSdk/outputs/apk/release/`. Release builds are minified, non-debuggable and shell-profileable, with development signing.
+Outputs are under `build/app/outputs/apk/sdk/{debug,release}/` and `build/noSdk/outputs/apk/release/`. Release builds are minified, non-debuggable and shell-profileable, with development signing.
 These are test APKs. Plain and SDK application IDs differ, so both can be installed together.
 
 ```sh
@@ -63,17 +62,25 @@ If an earlier build has a different signing certificate, export its results and 
 Open **Retrec benchmark**, choose a mode and select a workload:
 
 * **SDK off:** recorder packaged but never initialized in this fresh process.
-* **Recording · UI capture off:** initialized recording with `CorynUiCapturing.DISABLED`; built-in screen text and visuals are disabled.
+* **Recording without UI Captures:** initialized recording with `CorynUiCapturing.DISABLED`; built-in screen text and visuals are disabled.
 * **Full recording:** initialized recording with text and visuals. Other options follow the selected SDK's defaults.
 
-Tap **Measure 30 sec** for a 20-second warm-up and a 30-second process CPU interval. The app then takes a fresh memory snapshot, stops recording and
-validates simulated uploads outside that CPU interval. Select **Change mode** for another fresh process; recording cannot restart in an initialized process.
+Watch the live CPU, RAM/PSS, Java heap and native heap readings while exploring each workload.
+Select **Change mode** for another fresh process. Timed measurements and JSON exports are started by automation, without an on-screen measurement button.
+
+Portrait phones use a stacked layout. Landscape and tablet windows (at least 600 dp wide) use a control sidebar beside the workload;
+the mode chooser also uses two columns. Rotation preserves the selected workload, recording session and active timed run.
+Keep orientation and window size consistent when comparing benchmark runs.
+
+Set the **Target capture FPS** slider in the mode chooser before opening a fresh full-recording session. Local simulation accepts 0.5–10 FPS in 0.5 FPS steps (default 5),
+serves that target in the simulated project policy, and saves it in the result as `captureFpsTarget`. The live meter shows the selected target.
+This is a capture target, not the screen refresh rate or a guaranteed achieved rate: the SDK's adaptive cap can lower it.
+It has no effect with captures disabled.
 
 The default **Local simulation** works entirely on the phone: no account, server or port forwarding is needed.
-To test a real deployment, enable **Use hosted test project** and enter its test API key. Leave the endpoint blank for the SDK default.
-Hosted mode sends recordings to that project, including on metered networks; treat it as a separate experiment from local simulation.
+The app has no API-token or endpoint settings and never requires a hosted project for these runs.
 
-The app saves JSON measurements, including both CPU bases and the recorded core count, under:
+Automated timed runs save JSON measurements, including both CPU bases and the recorded core count, under:
 
 ```text
 /sdcard/Android/data/ai.coryn.replay.benchmark/files/results/
@@ -94,21 +101,31 @@ Repeatable workloads still have timing and GC variance. Negative differences do 
 ## AndroidX Macrobenchmark: frames and traces
 
 The separate Kotlin `tests` APK uses `FrameTimingMetric`, full compilation and UI Automator. Each iteration prepares a fresh SDK mode, waits for recording
-readiness, warms up outside the measured section, then runs the workload and waits for completion. No account or server setup is required.
+readiness, warms up outside the measured section, then starts the timed run through a single-top Activity intent and waits for completion.
+After the CPU interval, the app takes a fresh memory snapshot, stops recording and validates simulated uploads. No account or server setup is required.
 
 ```sh
 ANDROID_SERIAL=YOUR_SERIAL ./gradlew :tests:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=ai.coryn.replay.benchmark.tests.ScenarioBenchmark \
   -Pandroid.testInstrumentationRunnerArguments.mode=capture
 ```
 
 Modes: `off`, `recording`, `capture`. Run each mode for a comparison. Optional arguments: `iterations` (default 5), `warmupMs` (20000), `measureMs` (30000).
 AndroidX writes results and Perfetto traces under `build/tests/outputs/`; the app-side JSON snapshots remain in the device directory above.
 The measured test block includes waiting for finalization; use the app's CPU-window fields for its active-workload CPU interval.
-Run tests separately from interactive measurements because both need exclusive device access.
+Run tests separately from interactive measurements because both need exclusive device access. The performance suite holds the device in its natural orientation.
+
+Run the separate rotation regression to verify the stacked/two-column layouts, retained workload and uninterrupted recording session:
+
+```sh
+ANDROID_SERIAL=YOUR_SERIAL ./gradlew :tests:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=ai.coryn.replay.benchmark.tests.AdaptiveLayoutTest
+```
+
 
 ## How local simulation works
 
-The benchmark build plugin attaches an application interceptor to the SDK HTTP client factory in SDK/viewer variants. Production SDK artifacts are unchanged.
+The benchmark build plugin attaches an application interceptor to the SDK HTTP client factory in SDK app variants. Production SDK artifacts are unchanged.
 The interceptor supplies policy responses, consumes request bodies into a counted discard sink, and returns successful upload responses. Recording, capture,
 encoding, storage and request serialization still run. Counters validate sessions, recording chunks and image parts.
 
@@ -127,7 +144,7 @@ Cold initialization, finalization and post-stop upload work are outside the app'
 
 Do not add heap figures to PSS. Heap snapshots include allocations a later GC can reclaim. PSS is a sampled working set, not peak or long-session memory.
 The live meter runs in every mode and its card is masked in captures.
-Historical [Pixel 7 evidence](https://docs.coryn.ai/android/overhead) retains its frozen inputs; current reports normalize those original CPU readings by the recorded core count.
+Historical [Pixel 7 evidence](https://docs.retrec.io/android/overhead) retains its frozen inputs; current reports normalize those original CPU readings by the recorded core count.
 
 ## Benchmarking a client's app
 

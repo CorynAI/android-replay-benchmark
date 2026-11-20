@@ -8,6 +8,7 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
@@ -33,20 +34,27 @@ internal class ScenarioBenchmarkImpl {
         val duration = arguments.getString("measureMs", "30000").toLong()
         require(iterations in 1..100 && warmupMs in 0..600_000 && duration in 1_000..600_000)
         val packageName = "ai.coryn.replay.benchmark"
-        rule.measureRepeated(packageName, listOf(FrameTimingMetric()), CompilationMode.Full(), null, iterations, setupBlock = {
-            killProcess()
-            val configured = device.executeShellCommand("am broadcast --include-stopped-packages --receiver-foreground -n $packageName/.ModeReceiver " +
-                "--es mode $mode --es networkMode mock")
-            check(configured.contains("CONFIGURED:$mode")) { configured }
-            killProcess()
-            val intent = Intent().setComponent(ComponentName(packageName, "$packageName.BenchmarkActivity"))
-                .putExtra("scenario", scenario).putExtra("warmupMs", 0L).putExtra("measureMs", duration)
-            startActivityAndWait(intent)
-            check(device.wait(Until.hasObject(By.desc("sdk-ready")), 60_000)) { "Recording did not become ready" }
-            Thread.sleep(warmupMs)
-        }) {
-            device.findObject(By.res(packageName, "run_benchmark")).click()
-            check(device.wait(Until.hasObject(By.descStartsWith("benchmark-complete:")), duration + 65_000)) { "Benchmark did not complete" }
+        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        try {
+            rule.measureRepeated(packageName, listOf(FrameTimingMetric()), CompilationMode.Full(), null, iterations, setupBlock = {
+                device.setOrientationNatural()
+                killProcess()
+                val configured = device.executeShellCommand("am broadcast --include-stopped-packages --receiver-foreground -n $packageName/.ModeReceiver " +
+                    "--es mode $mode --es networkMode mock")
+                check(configured.contains("CONFIGURED:$mode")) { configured }
+                killProcess()
+                val intent = Intent().setComponent(ComponentName(packageName, "$packageName.BenchmarkActivity"))
+                    .putExtra("scenario", scenario).putExtra("warmupMs", 0L).putExtra("measureMs", duration)
+                startActivityAndWait(intent)
+                check(device.wait(Until.hasObject(By.desc("sdk-ready")), 60_000)) { "Recording did not become ready" }
+                Thread.sleep(warmupMs)
+            }) {
+                device.executeShellCommand("am start --activity-single-top -n $packageName/.BenchmarkActivity " +
+                    "--es runId macro-${System.currentTimeMillis()} --el warmupMs 0 --el measureMs $duration")
+                check(device.wait(Until.hasObject(By.descStartsWith("benchmark-complete:")), duration + 65_000)) { "Benchmark did not complete" }
+            }
+        } finally {
+            device.unfreezeRotation()
         }
     }
 }

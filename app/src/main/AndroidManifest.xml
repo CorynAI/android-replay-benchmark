@@ -1,11 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application android:name=".BenchmarkApplication" android:label="Retrec benchmark" android:icon="@drawable/ic_benchmark"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false"
+        android:theme="@style/BenchmarkTheme" android:allowBackup="false"
         android:usesCleartextTraffic="true" android:supportsRtl="true">
         <profileable android:shell="true" />
-        <activity android:name=".BenchmarkActivity" android:exported="true" android:screenOrientation="portrait" />
+        <activity android:name=".BenchmarkActivity" android:exported="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
         <activity android:name=".LauncherActivity" android:exported="true" android:process=":control"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
             android:taskAffinity="${applicationId}.control">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

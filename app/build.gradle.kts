@@ -23,13 +23,7 @@ android {
             dimension = "recording"
             buildConfigField("boolean", "HAS_CORYN", "true")
         }
-        create("viewer") {
-            dimension = "recording"
-            applicationIdSuffix = ".viewer"
-            buildConfigField("boolean", "HAS_CORYN", "true")
-        }
     }
-    sourceSets.getByName("viewer").kotlin.srcDir("src/sdk/java")
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -51,12 +45,12 @@ android {
 
 kotlin.compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
 
+val sdkDebugImplementation by configurations.creating
+
 dependencies {
     implementation(libs.serialization.kotlinx)
     "sdkImplementation"("com.squareup.okhttp3:okhttp:4.12.0")
-    "viewerImplementation"("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("junit:junit:4.13.2")
     "sdkImplementation"("ai.coryn.replay.api:recorder:${libs.versions.library.get()}")
-    "viewerImplementation"("ai.coryn.replay.api:recorder:${libs.versions.library.get()}")
-    "viewerImplementation"("ai.coryn.replay.api:log-viewer:${libs.versions.library.get()}")
+    sdkDebugImplementation("ai.coryn.replay.api:log-viewer:${libs.versions.library.get()}")
 }

@@ -1,11 +1,11 @@
 <resources>
+    <item name="target_fps" type="id" />
     <item name="metrics" type="id" />
     <item name="scenario_content" type="id" />
     <item name="scenario_static" type="id" />
     <item name="scenario_list" type="id" />
     <item name="scenario_images" type="id" />
     <item name="scenario_animation" type="id" />
-    <item name="run_benchmark" type="id" />
     <item name="mode_off" type="id" />
     <item name="mode_recording" type="id" />
     <item name="mode_capture" type="id" />

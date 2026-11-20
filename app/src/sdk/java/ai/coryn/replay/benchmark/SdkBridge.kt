@@ -23,8 +23,9 @@ internal class SdkBridge(private val application: Application, private val confi
             _error = "Enter a test project API key for hosted recording."
             return
         }
+        val logViewer = if (BuildConfig.DEBUG) CorynLogViewerIndicatorVisibility.VISIBLE_ALWAYS else CorynLogViewerIndicatorVisibility.GONE
         val builder = CorynConfiguration.Builder().setPreErase(true, null)
-            .setUploadOnMeteredNetworkAllowed(true).setLogViewerIndicatorVisibility(CorynLogViewerIndicatorVisibility.GONE)
+            .setUploadOnMeteredNetworkAllowed(true).setLogViewerIndicatorVisibility(logViewer)
         if (config.networkMode == "mock") {
             builder.setNetworkBaseUrl("https://benchmark.invalid/api/")
         } else if (config.endpoint.isNotEmpty()) {

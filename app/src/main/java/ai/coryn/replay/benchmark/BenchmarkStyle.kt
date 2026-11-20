@@ -2,6 +2,7 @@ package ai.coryn.replay.benchmark
 
 import android.app.Activity
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -13,6 +14,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 internal class BenchmarkStyle(private val activity: Activity) {
+    val wideLayout: Boolean get() = activity.resources.configuration.let {
+        it.orientation == Configuration.ORIENTATION_LANDSCAPE || it.screenWidthDp >= 600
+    }
     val ink = Color.rgb(40, 44, 62)
     val navy = Color.rgb(28, 36, 64)
     val muted = Color.rgb(100, 101, 120)
